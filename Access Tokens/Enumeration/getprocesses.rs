@@ -20,9 +20,9 @@ pub fn getprocesses() -> Result<HashMap<String,usize>,String>{
         loop{
            
             let procinfo = *(nextbase as *mut SYSTEM_PROCESS_INFORMATION);
-            println!("processname: {} \t pid: {}",
-            unicodetostring(&procinfo.ImageName, GetCurrentProcess()),procinfo.UniqueProcessId as usize);
-            allprocs.insert(unicodetostring(&procinfo.ImageName, GetCurrentProcess()), procinfo.UniqueProcessId as usize);
+            
+            allprocs.insert(unicodetostring(&procinfo.ImageName, GetCurrentProcess())
+            .trim_end_matches("\0").to_string(), procinfo.UniqueProcessId as usize);
             let nextoffset = std::ptr::read(nextbase as *const u32);
             if nextoffset == 0{
                 break;
