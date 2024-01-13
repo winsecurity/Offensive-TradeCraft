@@ -1,5 +1,6 @@
-pub fn getprocesses(){
+pub fn getprocesses() -> Result<HashMap<String,usize>,String>{
     unsafe{
+        let mut allprocs:HashMap<String,usize> = HashMap::new(); 
         let mut bytesneeded = 0u32;
         let mut ntstatus = 0i32;
         let mut buffer = loop {
@@ -21,6 +22,7 @@ pub fn getprocesses(){
             let procinfo = *(nextbase as *mut SYSTEM_PROCESS_INFORMATION);
             println!("processname: {} \t pid: {}",
             unicodetostring(&procinfo.ImageName, GetCurrentProcess()),procinfo.UniqueProcessId as usize);
+            allprocs.insert(unicodetostring(&procinfo.ImageName, GetCurrentProcess()), procinfo.UniqueProcessId as usize);
             let nextoffset = std::ptr::read(nextbase as *const u32);
             if nextoffset == 0{
                 break;
@@ -29,7 +31,7 @@ pub fn getprocesses(){
             
         }
 
+        return Ok(allprocs);
         
     }
 }
-
