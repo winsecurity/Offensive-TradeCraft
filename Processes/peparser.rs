@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
 use std::{fs::File, io::Read};
 
 use ntapi::ntobapi::NtQueryObject;
@@ -198,8 +199,12 @@ impl peparser{
     }
 
 
-    fn getimports(&self) -> Result<Vec<IMAGE_IMPORT_DESCRIPTOR>, String>{
+    fn getimports(&self) -> Result<Vec<HashMap<String,HashMap<String,Vec<usize>>>>, String>{
+        
         if self.filecontents.len()>0{
+            let mut imports:Vec<HashMap<String,HashMap<String,Vec<usize>>>> = Vec::new();
+            
+
             let ntheader = self.getntheader();
             if ntheader.OptionalHeader.DataDirectory[1].Size==0{
                 return Err("no imports".to_string());
@@ -207,6 +212,9 @@ impl peparser{
            
             let mut firstimportaddress = self.filecontents.as_ptr() as usize + (self.rvatofileoffset(ntheader.OptionalHeader.DataDirectory[1].VirtualAddress as usize).unwrap());
             
+            let mut dlls:HashMap<String,HashMap<String,Vec<usize>>> = HashMap::new();
+           
+
             loop{
                 
                 let firstimport= unsafe{RemoteParse::<IMAGE_IMPORT_DESCRIPTOR>(GetCurrentProcess(), firstimportaddress as *const c_void)}.unwrap();
@@ -214,24 +222,78 @@ impl peparser{
                 if firstimport.Name == 0{
                     break;
                 }
-                println!("{}",unsafe{
+                
+                let dllname = unsafe{
                     ReadStringFromMemory(GetCurrentProcess(),
                     (self.filecontents.as_ptr() as usize +
                      self.rvatofileoffset(firstimport.Name as usize).unwrap() as usize)
                      as *const c_void
-                    )});
+                    )};
                 
                 
-                let oft = unsafe{self.rvatofileoffset(*firstimport.u.OriginalFirstThunk() as usize)}.unwrap();
-                let importbyname = unsafe{RemoteParse::<IMAGE_IMPORT_BY_NAME>(GetCurrentProcess(), (self.filecontents.as_ptr() as usize + oft) as *const c_void)}.unwrap();
+                let mut firstoft = self.filecontents.as_ptr() as usize + unsafe{self.rvatofileoffset(*firstimport.u.OriginalFirstThunk() as usize)}.unwrap();
+                let mut firstft = self.filecontents.as_ptr() as usize + unsafe{self.rvatofileoffset(firstimport.FirstThunk as usize)}.unwrap();
+                
+                let mut funcs:HashMap<String,Vec<usize>> = HashMap::new();
+            
 
-                
+                'funloop: loop{
+                   
+                    let mut thunks:Vec<usize> = Vec::new();
+                    let mut oftbuffer = vec![0u8;8];
+                    let mut bytesread = 0;
+                    unsafe{
+                        ReadProcessMemory(GetCurrentProcess(), 
+                        firstoft as *mut c_void,
+                        oftbuffer.as_mut_ptr() as *mut c_void ,
+                        8 , 
+                        &mut bytesread);
+                    }
+                    let importbyname = u64::from_ne_bytes(oftbuffer.try_into().unwrap());
+                    //let importbyname = unsafe{RemoteParse::<IMAGE_IMPORT_BY_NAME>(GetCurrentProcess(), firstoft as *const c_void)}.unwrap();
+                    
+                    if importbyname == 0{
+                        break 'funloop;
+                    }
 
+
+                    // reading firstthunk
+                    let mut ftbuffer = vec![0u8;8];
+                    let mut bytesread = 0;
+                    unsafe{
+                        ReadProcessMemory(GetCurrentProcess(), 
+                        firstft as *mut c_void,
+                        ftbuffer.as_mut_ptr() as *mut c_void ,
+                        8 , 
+                        &mut bytesread);
+                    }
+
+
+
+                    thunks.push(importbyname as usize);
+                    thunks.push(u64::from_ne_bytes(ftbuffer.try_into().unwrap()) as usize);
+
+                    let funcaddress = unsafe { self.filecontents.as_ptr() as usize + 2 + self.rvatofileoffset(importbyname as usize).unwrap() };
+                    let functionname = unsafe{
+                        ReadStringFromMemory(GetCurrentProcess(), funcaddress as *const c_void)
+                    };
+                   
+
+                    funcs.insert(functionname, thunks);
+
+                    firstoft += 8 as usize;
+                    firstft += 8 as usize;
+                }
+                
+                dlls.insert(dllname, funcs);
 
                 firstimportaddress += std::mem::size_of::<IMAGE_IMPORT_DESCRIPTOR>();
-
+                println!();
             }
             
+
+            imports.push(dlls);
+            return Ok(imports);
         }
 
         return Ok(Vec::new());
@@ -274,7 +336,7 @@ fn main() {
         println!();
     }
 
-    pe.getimports();
+    println!("{:x?}",pe.getimports().unwrap());
 
 
 }
