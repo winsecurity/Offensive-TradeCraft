@@ -1,3 +1,50 @@
+use std::collections::HashMap;
+
+use ntapi::ntobapi::NtQueryObject;
+use ntapi::ntobapi::OBJECT_INFORMATION_CLASS;
+use ntapi::ntobapi::OBJECT_TYPE_INFORMATION;
+use ntapi::ntpsapi::PROCESSINFOCLASS;
+use ntapi::ntpsapi::PROCESS_BASIC_INFORMATION;
+use ntapi::ntrtl::RtlAnsiStringToUnicodeString;
+use ntapi::ntrtl::RtlInitAnsiString;
+use winapi::ctypes::*;
+use winapi::shared::minwindef::FILETIME;
+use winapi::shared::ntdef::NT_SUCCESS;
+use winapi::shared::ntdef::STRING;
+use winapi::shared::ntdef::UNICODE_STRING;
+use winapi::shared::ntstatus::STATUS_INFO_LENGTH_MISMATCH;
+use winapi::shared::ntstatus::STATUS_SUCCESS;
+use winapi::shared::sddl::*;
+use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::fileapi::CREATE_NEW;
+use winapi::um::handleapi::CloseHandle;
+use winapi::um::handleapi::DuplicateHandle;
+use winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use winapi::um::lsalookup::LSA_STRING;
+use winapi::um::lsalookup::LSA_UNICODE_STRING;
+use winapi::um::memoryapi::ReadProcessMemory;
+use winapi::um::memoryapi::WriteProcessMemory;
+use winapi::um::ntlsa::SECURITY_LOGON_SESSION_DATA;
+use winapi::um::ntsecapi::*;
+use winapi::um::processthreadsapi::*;
+use winapi::um::securitybaseapi::*;
+use winapi::um::timezoneapi::FileTimeToSystemTime;
+use winapi::um::winbase::*;
+use winapi::um::winnt::*;
+use winapi::um::winnt::{TOKEN_INFORMATION_CLASS, TOKEN_USER};
+use winapi::um::ntlsa::*;
+use ntapi::ntexapi::*;
+use winapi::um::synchapi::*;
+use winapi::um::tlhelp32::*;
+use winapi::shared::winerror::*;
+use itertools::Itertools;
+use winapi::um::memoryapi::*;
+use winapi::um::subauth::*;
+use winapi::um::minwinbase::*;
+use crate::unicodetostring;
+
+
+
 pub fn getcachedtickets(){
     unsafe{
 
