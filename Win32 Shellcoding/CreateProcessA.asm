@@ -103,7 +103,7 @@
 
 			push esi
 			; 636d642e657865 cmd.exe
-			; 63616c632e657865 calc.exe
+			; 63616c63 2e657865 calc.exe
 			; 433a5c57696e646f77735c537973574f5736345c63616c632e657865
 			; C:\Windows\SysWOW64\calc.exe
 			;push		2e657865h
@@ -114,8 +114,8 @@
 			;push			696e646fh
 			;push			433a5c57h
 			;push		433a5c57h
-			push 2e657865h
-			push 63616c63h ; pushing calc.exe
+			push  6578652eh
+			push 636c6163h ; pushing calc.exe
 			mov esi, esp
 
 
